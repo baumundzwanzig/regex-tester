@@ -32,7 +32,14 @@
           "group": "navigation"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "regex-tester.findRegex",
+        "key": "ctrl+shift+alt+r",
+        "when": "editorTextFocus && !editorReadonly"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
