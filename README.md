@@ -17,6 +17,11 @@ This is my first extension i have ever made and published. I was tired switching
 
 ## Release Notes
 
+### 0.3.0
+
++ Added icon instead of text for toggeling the command
++ added Keybinding (CTRL+ALT+SHIFT+R)
+
 ### 0.1.5
 
 I added RegEx flags, which can be specified after you typed in the RegEx itself.
