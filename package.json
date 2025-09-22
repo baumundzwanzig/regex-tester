@@ -21,7 +21,8 @@
     "commands": [
       {
         "command": "regex-tester.findRegex",
-        "title": "RegEx finden"
+        "title": "RegEx finden",
+        "icon": "$(regex)"
       }
     ],
     "menus": {
