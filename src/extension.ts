@@ -35,8 +35,11 @@ export function activate(context: vscode.ExtensionContext) {
 			prompt: 'Insert RegEx flags (e.g. gi)',
 			placeHolder: 'gi'
 		});
-		// Default: global flag, falls leer
-		const flags = flagsInput !== undefined ? flagsInput : 'g';
+		// Default: global flag, falls leer oder nur Leerzeichen
+		let flags = flagsInput && flagsInput.trim() !== '' ? flagsInput.trim() : 'g';
+		if (!flags.includes('g')) {
+			flags += 'g';
+		}
 
 		// Aktives Dokument holen
 		const editor = vscode.window.activeTextEditor;
