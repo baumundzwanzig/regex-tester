@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/baumundzwanzig/regex-tester.git"
   },
-  "version": "0.1.0",
+  "version": "0.1.5",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -21,7 +21,7 @@
     "commands": [
       {
         "command": "regex-tester.findRegex",
-        "title": "Find RegEx"
+        "title": "Find Regex"
       }
     ],
     "menus": {
@@ -29,8 +29,7 @@
         {
           "command": "regex-tester.findRegex",
           "when": "editorTextFocus && !editorReadonly",
-          "group": "navigation",
-          "icon": "search"
+          "group": "navigation"
         }
       ]
     }

@@ -17,6 +17,10 @@ This is my first extension i have ever made and published. I was tired switching
 
 ## Release Notes
 
+### 0.1.5
+
+I added RegEx flags, which can be specified after you typed in the RegEx itself.
+
 ### 0.1.0 
 
 Initial release.

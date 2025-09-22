@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Command für Regex-Suche
 	const findRegexDisposable = vscode.commands.registerCommand('regex-tester.findRegex', async () => {
-		// InputBox für Regex-String
+		// InputBox für Regex-Pattern
 		const regexInput = await vscode.window.showInputBox({
 			prompt: 'Insert a RegEx pattern',
 			placeHolder: 'e.g. (\w+)' 
@@ -29,6 +29,14 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!regexInput) {
 			return;
 		}
+
+		// InputBox für Flags
+		const flagsInput = await vscode.window.showInputBox({
+			prompt: 'Insert RegEx flags (e.g. gi)',
+			placeHolder: 'gi'
+		});
+		// Default: global flag, falls leer
+		const flags = flagsInput !== undefined ? flagsInput : 'g';
 
 		// Aktives Dokument holen
 		const editor = vscode.window.activeTextEditor;
@@ -40,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const text = editor.document.getText();
 		let regex: RegExp;
 		try {
-			regex = new RegExp(regexInput, 'g');
+			regex = new RegExp(regexInput, flags);
 		} catch (e) {
 			vscode.window.showErrorMessage('Invalid regex: ' + e);
 			return;
