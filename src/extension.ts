@@ -126,7 +126,10 @@ export function activate(context: vscode.ExtensionContext) {
 			output.appendLine('Found Matches:');
 			const groupLabels = ['Blau', 'Grün', 'Rosa', 'Lila', 'Orange'];
 			matches.forEach((m, i) => {
-				output.appendLine(`Match ${i + 1}: [${m.start}, ${m.end}], Value: ${text.slice(m.start, m.end)}`);
+				const startPos = editor.document.positionAt(m.start);
+				const lineNumber = startPos.line + 1; // VS Code lines are 0-indexed
+				const columnNumber = startPos.character + 1; // VS Code columns are 0-indexed
+				output.appendLine(`Match ${i + 1}: Line ${lineNumber}, Column ${columnNumber}, [${m.start}, ${m.end}], Value: ${text.slice(m.start, m.end)}`);
 				if (m.groups && m.groups.length > 0) {
 					m.groups.forEach((group, idx) => {
 						output.appendLine(`  Group ${idx + 1} (${groupLabels[idx] || 'Color'}): ${group}`);
@@ -240,7 +243,10 @@ export function activate(context: vscode.ExtensionContext) {
 			output.appendLine('Found Matches:');
 			const groupLabels = ['Blau', 'Grün', 'Rosa', 'Lila', 'Orange'];
 			matches.forEach((m, i) => {
-				output.appendLine(`Match ${i + 1}: [${m.start}, ${m.end}], Value: ${text.slice(m.start, m.end)}`);
+				const startPos = editor.document.positionAt(m.start);
+				const lineNumber = startPos.line + 1; // VS Code lines are 0-indexed
+				const columnNumber = startPos.character + 1; // VS Code columns are 0-indexed
+				output.appendLine(`Match ${i + 1}: Line ${lineNumber}, Column ${columnNumber}, [${m.start}, ${m.end}], Value: ${text.slice(m.start, m.end)}`);
 				if (m.groups && m.groups.length > 0) {
 					m.groups.forEach((group, idx) => {
 						output.appendLine(`  Group ${idx + 1} (${groupLabels[idx] || 'Color'}): ${group}`);
