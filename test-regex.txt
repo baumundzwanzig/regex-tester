@@ -1,0 +1,21 @@
+Test file for regex: @listitem\((.*)\)
+
+Sample content with @listitem patterns:
+
+@listitem(first item)
+Some text here
+@listitem(second item with spaces)
+More text
+@listitem(third_item_with_underscores)
+And even more text
+@listitem(fourth item (with nested parentheses))
+
+Also some false positives:
+@listitem without parentheses
+listitem(without @)
+@listitem( incomplete
+
+And some edge cases:
+@listitem()
+@listitem(a)
+@listitem(very long item description with multiple words and punctuation!)

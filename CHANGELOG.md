@@ -6,6 +6,35 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-09-23
+
+### 🐛 Fixed
+- **🔧 Auto-loading Text from Editor**: Fixed issue where text from active editor wasn't automatically loaded when opening the webview
+- **✨ Clear Highlights Button**: Fixed malfunctioning "Clear Highlights" button that wasn't removing editor highlighting
+- **🏷️ @listitem Pattern Escaping**: Fixed critical issue with backslash escaping in patterns like `@listitem\((.*)\)` that prevented matches from being found
+- **🎯 Editor Focus Handling**: Fixed problem where webview couldn't access editor text when webview had focus instead of editor
+- **🔄 Persistent Debug Window**: Fixed debug information window that was disappearing immediately after opening
+
+### ✨ Enhanced
+- **🧠 Intelligent Escaping Detection**: Added multiple decoding strategies to automatically handle different backslash escaping scenarios
+- **📝 Persistent Debug Information**: Debug window now stays open with a "Close Debug Info" button for better debugging experience
+- **🎨 Visual Debug Improvements**: Debug info is now displayed in a distinctive blue-bordered box for better visibility
+- **🔍 Comprehensive Logging**: Enhanced debug logging throughout the entire pipeline for easier troubleshooting
+- **⚡ Robust Editor State Management**: Improved handling of editor references to ensure consistent behavior regardless of focus state
+
+### 🏗️ Technical Improvements
+- **🎯 Multi-Strategy Pattern Correction**: Implemented automatic testing of different escaping strategies to find the best match
+- **📱 Ready-Signal Communication**: Enhanced webview-extension communication with proper initialization signals
+- **🔄 Consistent Highlighting Logic**: Both webview analysis and editor highlighting now use the same corrected regex patterns
+- **🛡️ Better Error Recovery**: Improved fallback mechanisms when primary editor detection fails
+- **📊 Enhanced Debug Infrastructure**: Added character code analysis and pattern transformation tracking
+
+### 🎨 User Experience
+- **🚀 Seamless Workflow**: Text now loads automatically when opening webview with an active editor
+- **🔧 Reliable Debug Tools**: Debug functionality works consistently without disappearing
+- **✅ Consistent Results**: Webview and editor highlighting now always show the same matches
+- **🎯 Pattern-Specific Fixes**: Special handling for common patterns like `@listitem\((.*)\)` that require specific escaping
+
 ## [0.3.3] - 2025-09-23
 
 ### Added
