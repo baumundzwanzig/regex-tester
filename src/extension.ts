@@ -1,10 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { RegexWebviewProvider } from './regexWebviewProvider';
+import { highlightMatches } from './highlighter';
 
-// Globale Referenzen für DecorationTypes
-let mainDecorationType: vscode.TextEditorDecorationType | undefined;
-let groupDecorationTypes: vscode.TextEditorDecorationType[] = [];
+// Globale Referenzen für DecorationTypes - DEPRECATED, moved to highlighter.ts
 let clearDecorationsDisposable: vscode.Disposable | undefined;
 
 // This method is called when your extension is activated
@@ -68,56 +68,8 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		}
 
-
-		// Haupt-Match-Dekoration
-		mainDecorationType = vscode.window.createTextEditorDecorationType({
-			backgroundColor: 'rgba(255,255,0,0.4)',
-			border: '1px solid orange'
-		});
-
-		// Farben für Gruppen
-		const groupColors = [
-			'rgba(135,206,250,0.4)', // Gruppe 1: hellblau
-			'rgba(144,238,144,0.4)', // Gruppe 2: hellgrün
-			'rgba(255,182,193,0.4)', // Gruppe 3: rosa
-			'rgba(221,160,221,0.4)', // Gruppe 4: lila
-			'rgba(255,165,0,0.4)'    // Gruppe 5: orange
-		];
-		groupDecorationTypes = groupColors.map(color =>
-			vscode.window.createTextEditorDecorationType({ backgroundColor: color })
-		);
-
-		// Haupt-Matches hervorheben
-		const mainDecorations: vscode.DecorationOptions[] = matches.map(m => {
-			const startPos = editor.document.positionAt(m.start);
-			const endPos = editor.document.positionAt(m.end);
-			return {
-				range: new vscode.Range(startPos, endPos),
-				hoverMessage: m.groups && m.groups.length > 0 ? 'Groups: ' + m.groups.join(', ') : 'Match'
-			};
-		});
-		editor.setDecorations(mainDecorationType, mainDecorations);
-
-		// Gruppen hervorheben
-		matches.forEach(m => {
-			if (m.groups) {
-				m.groups.forEach((group, idx) => {
-					if (group && group.length > 0 && idx < groupDecorationTypes.length) {
-						const groupStart = text.indexOf(group, m.start);
-						if (groupStart !== -1) {
-							const groupEnd = groupStart + group.length;
-							const startPos = editor.document.positionAt(groupStart);
-							const endPos = editor.document.positionAt(groupEnd);
-							const decoration: vscode.DecorationOptions = {
-								range: new vscode.Range(startPos, endPos),
-								hoverMessage: `Group ${idx + 1}: ${group}`
-							};
-							editor.setDecorations(groupDecorationTypes[idx], [decoration]);
-						}
-					}
-				});
-			}
-		});
+		// Highlighting anwenden
+		highlightMatches(editor, matches);
 
 		// Gruppen im Output anzeigen
 		if (matches.length > 0) {
@@ -186,55 +138,8 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		}
 
-		// Haupt-Match-Dekoration
-		mainDecorationType = vscode.window.createTextEditorDecorationType({
-			backgroundColor: 'rgba(255,255,0,0.4)',
-			border: '1px solid orange'
-		});
-
-		// Farben für Gruppen
-		const groupColors = [
-			'rgba(135,206,250,0.4)', // Gruppe 1: hellblau
-			'rgba(144,238,144,0.4)', // Gruppe 2: hellgrün
-			'rgba(255,182,193,0.4)', // Gruppe 3: rosa
-			'rgba(221,160,221,0.4)', // Gruppe 4: lila
-			'rgba(255,165,0,0.4)'    // Gruppe 5: orange
-		];
-		groupDecorationTypes = groupColors.map(color =>
-			vscode.window.createTextEditorDecorationType({ backgroundColor: color })
-		);
-
-		// Haupt-Matches hervorheben
-		const mainDecorations: vscode.DecorationOptions[] = matches.map(m => {
-			const startPos = editor.document.positionAt(m.start);
-			const endPos = editor.document.positionAt(m.end);
-			return {
-				range: new vscode.Range(startPos, endPos),
-				hoverMessage: m.groups && m.groups.length > 0 ? 'Groups: ' + m.groups.join(', ') : 'Match'
-			};
-		});
-		editor.setDecorations(mainDecorationType, mainDecorations);
-
-		// Gruppen hervorheben
-		matches.forEach(m => {
-			if (m.groups) {
-				m.groups.forEach((group, idx) => {
-					if (group && group.length > 0 && idx < groupDecorationTypes.length) {
-						const groupStart = text.indexOf(group, m.start);
-						if (groupStart !== -1) {
-							const groupEnd = groupStart + group.length;
-							const startPos = editor.document.positionAt(groupStart);
-							const endPos = editor.document.positionAt(groupEnd);
-							const decoration: vscode.DecorationOptions = {
-								range: new vscode.Range(startPos, endPos),
-								hoverMessage: `Group ${idx + 1}: ${group}`
-							};
-							editor.setDecorations(groupDecorationTypes[idx], [decoration]);
-						}
-					}
-				});
-			}
-		});
+		// Highlighting anwenden
+		highlightMatches(editor, matches);
 
 		// Gruppen im Output anzeigen
 		if (matches.length > 0) {
@@ -263,31 +168,76 @@ export function activate(context: vscode.ExtensionContext) {
 	// Event-Listener: Entferne Markierungen bei Cursorbewegung oder Klick
 	clearDecorationsDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
 		const editor = event.textEditor;
-		if (mainDecorationType) {
-			editor.setDecorations(mainDecorationType, []);
-		}
-		if (groupDecorationTypes.length > 0) {
-			groupDecorationTypes.forEach(type => editor.setDecorations(type, []));
-		}
+		// Use new highlighting function to clear
+		highlightMatches(editor, []);
 	});
 	context.subscriptions.push(clearDecorationsDisposable);
+
+	// Webview Provider registrieren
+	const webviewProvider = new RegexWebviewProvider(context.extensionUri);
+	
+	// Editor change listener für Webview
+	const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
+		if (editor) {
+			webviewProvider.onEditorChanged();
+		}
+	});
+	context.subscriptions.push(editorChangeDisposable);
+
+	// Document change listener für Webview
+	const documentChangeDisposable = vscode.workspace.onDidChangeTextDocument(event => {
+		const editor = vscode.window.activeTextEditor;
+		if (editor && event.document === editor.document) {
+			webviewProvider.onDocumentChanged();
+		}
+	});
+	context.subscriptions.push(documentChangeDisposable);
+	
+	// Command für Webview
+	const openWebviewDisposable = vscode.commands.registerCommand('regex-tester.openWebview', () => {
+		// Create and show panel
+		const panel = vscode.window.createWebviewPanel(
+			'regexAnalyzer',
+			'RegEx Analyzer',
+			vscode.ViewColumn.Beside,
+			{
+				enableScripts: true,
+				retainContextWhenHidden: true
+			}
+		);
+
+		// Set the webview's initial html content
+		panel.webview.html = webviewProvider.getWebviewContent(panel.webview);
+
+		// Set the panel in provider for communication
+		webviewProvider.setPanel(panel);
+
+		// Handle messages from the webview
+		panel.webview.onDidReceiveMessage(
+			message => {
+				webviewProvider.handleMessage(message, panel.webview);
+			},
+			undefined,
+			context.subscriptions
+		);
+	});
+	context.subscriptions.push(openWebviewDisposable);
+
+	// Register provider for cleanup
+	context.subscriptions.push({
+		dispose: () => {
+			webviewProvider.dispose();
+		}
+	});
 }
 
 // This method is called when your extension is deactivated
 export function deactivate() {
     const editor = vscode.window.activeTextEditor;
     if (editor) {
-        if (mainDecorationType) {
-            editor.setDecorations(mainDecorationType, []);
-        }
-        groupDecorationTypes.forEach(type => editor.setDecorations(type, []));
+        // Use new highlighting function to clear all decorations
+        highlightMatches(editor, []);
     }
-    if (mainDecorationType) {
-        mainDecorationType.dispose();
-        mainDecorationType = undefined;
-    }
-    groupDecorationTypes.forEach(type => type.dispose());
-    groupDecorationTypes = [];
     if (clearDecorationsDisposable) {
         clearDecorationsDisposable.dispose();
         clearDecorationsDisposable = undefined;

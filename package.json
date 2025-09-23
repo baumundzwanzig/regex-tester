@@ -29,12 +29,22 @@
       {
         "command": "regex-tester.findRegexFromSelection",
         "title": "Find RegEx from Selection"
+      },
+      {
+        "command": "regex-tester.openWebview",
+        "title": "RegEx Analyzer",
+        "icon": "$(browser)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "regex-tester.findRegex",
+          "when": "editorTextFocus && !editorReadonly",
+          "group": "navigation"
+        },
+        {
+          "command": "regex-tester.openWebview",
           "when": "editorTextFocus && !editorReadonly",
           "group": "navigation"
         }
