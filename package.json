@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "version": "0.3.2",
+  "icon": "Regex-tester-logo.png",
   "engines": {
     "vscode": "^1.104.0"
   },
