@@ -1,7 +1,7 @@
 {
   "name": "vscode-regex-tester",
   "displayName": "RegEx Tester for VSCode",
-  "description": "You can input Regex-Strings and the extension will highlight matches.",
+  "description": "Find Regex matches and groups in your current file",
   "publisher": "baumundzwanzig",
   "repository": {
     "type": "git",
