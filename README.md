@@ -5,6 +5,7 @@ This is my first extension i have ever made and published. I was tired switching
 ## Features
 
 + Highlighting of matches and groups
++ shows line and column of those matches
 + Outputs the strings of all detected matches and groups
 + When clicking anywhere in the editor, the highlighting disapears.
 + Accessible thruogh a button in the header of the open tab and Keybinding (CTRL+SHIFT+ALT+R)
