@@ -10,8 +10,13 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
     private _mainDecorationType?: vscode.TextEditorDecorationType;
     private _groupDecorationTypes: vscode.TextEditorDecorationType[] = [];
     private _lastActiveEditor?: vscode.TextEditor; // Store the last editor we worked with
+    private _context: vscode.ExtensionContext;
+    private static readonly HISTORY_KEY = 'regexHistory';
+    private static readonly MAX_HISTORY_ITEMS = 20;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {}
+    constructor(private readonly _extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
+        this._context = context;
+    }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -49,9 +54,10 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         // Also send when webview becomes visible
         webviewView.onDidChangeVisibility(() => {
             if (webviewView.visible) {
-                console.log('[resolveWebviewView] Webview became visible, sending editor text...');
+                console.log('[resolveWebviewView] Webview became visible, sending editor text and history...');
                 setTimeout(() => {
                     this._sendActiveEditorText(webviewView.webview);
+                    this._sendHistoryToWebview(webviewView.webview);
                 }, 100);
             }
         });
@@ -90,8 +96,61 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             case 'clearHighlights':
                 this._clearHighlights();
                 break;
+            case 'getHistory':
+                this._sendHistoryToWebview(webview);
+                break;
+            case 'clearHistory':
+                this._clearHistory();
+                this._sendHistoryToWebview(webview);
                 break;
         }
+    }
+
+    // History Management Methods
+    private _getHistory(): Array<{pattern: string, flags: string, timestamp: number}> {
+        const history = this._context.workspaceState.get<Array<{pattern: string, flags: string, timestamp: number}>>(RegexWebviewProvider.HISTORY_KEY, []);
+        return history.sort((a, b) => b.timestamp - a.timestamp); // Newest first
+    }
+
+    private _addToHistory(pattern: string, flags: string) {
+        if (!pattern.trim()) {
+            return; // Don't save empty patterns
+        }
+        
+        const history = this._getHistory();
+        const newEntry = { pattern, flags, timestamp: Date.now() };
+        
+        // Remove duplicates (same pattern and flags)
+        const filteredHistory = history.filter(item => 
+            !(item.pattern === pattern && item.flags === flags)
+        );
+        
+        // Add new entry at the beginning
+        filteredHistory.unshift(newEntry);
+        
+        // Limit history size
+        const limitedHistory = filteredHistory.slice(0, RegexWebviewProvider.MAX_HISTORY_ITEMS);
+        
+        this._context.workspaceState.update(RegexWebviewProvider.HISTORY_KEY, limitedHistory);
+        console.log('[History] Added pattern to history:', pattern, 'Total items:', limitedHistory.length);
+    }
+
+    private _clearHistory() {
+        this._context.workspaceState.update(RegexWebviewProvider.HISTORY_KEY, []);
+        console.log('[History] Cleared history');
+    }
+
+    private _sendHistoryToWebview(webview?: vscode.Webview) {
+        const targetWebview = webview || this._panel?.webview || this._view?.webview;
+        if (!targetWebview) {
+            return;
+        }
+        
+        const history = this._getHistory();
+        targetWebview.postMessage({
+            type: 'regexHistory',
+            history: history
+        });
     }
 
     private _analyzeRegex(regexPattern: string, flags: string, testString: string, webview?: vscode.Webview) {
@@ -290,6 +349,9 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
                 isValid: true,
                 error: null
             });
+
+            // Add to history after successful analysis
+            this._addToHistory(regexPattern, flags);
 
             // Highlight matches in editor
             console.log('[_analyzeRegex] Sending', matches.length, 'matches to webview and highlighting in editor');
@@ -532,6 +594,78 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             box-shadow: 0 0 0 1px var(--vscode-inputValidation-errorBorder);
         }
         
+        /* History Styles */
+        .history-container {
+            margin-top: 8px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 3px;
+            background-color: var(--vscode-input-background);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--vscode-editor-background);
+            border-bottom: 1px solid var(--vscode-input-border);
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .clear-history-btn {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            padding: 2px 6px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        
+        .clear-history-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        
+        .history-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--vscode-input-border);
+            font-family: var(--vscode-editor-font-family);
+            font-size: 12px;
+        }
+        
+        .history-item:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-pattern {
+            font-weight: bold;
+            color: var(--vscode-textLink-foreground);
+        }
+        
+        .history-flags {
+            color: var(--vscode-descriptionForeground);
+            margin-left: 8px;
+        }
+        
+        .history-timestamp {
+            color: var(--vscode-descriptionForeground);
+            font-size: 10px;
+            float: right;
+        }
+        
         .button-group {
             margin: 16px 0;
             display: flex;
@@ -650,6 +784,13 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         <div class="input-group">
             <label for="regex">Regular Expression:</label>
             <input type="text" id="regex" class="regex-input" placeholder="Enter your regex pattern..." value="\\w+">
+            <div id="historyContainer" class="history-container" style="display: none;">
+                <div class="history-header">
+                    <span>📜 Recent Patterns</span>
+                    <button id="clearHistoryBtn" class="clear-history-btn">🗑️ Clear</button>
+                </div>
+                <div id="historyList" class="history-list"></div>
+            </div>
         </div>
         
         <div class="input-group">
@@ -689,12 +830,27 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         const debugBtn = document.getElementById('debugBtn');
         const resultsDiv = document.getElementById('results');
         
+        // History elements
+        const historyContainer = document.getElementById('historyContainer');
+        const historyList = document.getElementById('historyList');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        
         // Event listeners
         analyzeBtn.addEventListener('click', analyzeRegex);
         loadEditorBtn.addEventListener('click', loadFromEditor);
         clearBtn.addEventListener('click', clearAll);
         clearHighlightsBtn.addEventListener('click', clearHighlights);
         debugBtn.addEventListener('click', debugPattern);
+        
+        // History event listeners
+        clearHistoryBtn.addEventListener('click', clearHistory);
+        
+        // Show/hide history on focus/blur
+        regexInput.addEventListener('focus', showHistory);
+        regexInput.addEventListener('blur', () => {
+            // Delay hiding to allow click on history items
+            setTimeout(hideHistory, 200);
+        });
         
         // Auto-analyze on input change (with debounce)
         let debounceTimer;
@@ -831,6 +987,69 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             });
         }
         
+        // History Functions
+        function showHistory() {
+            vscode.postMessage({ type: 'getHistory' });
+        }
+        
+        function hideHistory() {
+            historyContainer.style.display = 'none';
+        }
+        
+        function clearHistory() {
+            vscode.postMessage({ type: 'clearHistory' });
+        }
+        
+        function selectHistoryItem(pattern, flags) {
+            regexInput.value = pattern;
+            flagsInput.value = flags;
+            hideHistory();
+            
+            // Trigger validation and analysis
+            validateRegex();
+            analyzeRegex();
+        }
+        
+        function renderHistory(history) {
+            if (!history || history.length === 0) {
+                historyContainer.style.display = 'none';
+                return;
+            }
+            
+            historyList.innerHTML = '';
+            history.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                const timeAgo = getTimeAgo(item.timestamp);
+                historyItem.innerHTML = 
+                    '<span class="history-pattern">' + escapeHtml(item.pattern) + '</span>' +
+                    '<span class="history-flags">' + (item.flags || '') + '</span>' +
+                    '<span class="history-timestamp">' + timeAgo + '</span>';
+                
+                historyItem.addEventListener('click', () => {
+                    selectHistoryItem(item.pattern, item.flags);
+                });
+                
+                historyList.appendChild(historyItem);
+            });
+            
+            historyContainer.style.display = 'block';
+        }
+        
+        function getTimeAgo(timestamp) {
+            const now = Date.now();
+            const diff = now - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return days + 'd ago';
+            if (hours > 0) return hours + 'h ago';
+            if (minutes > 0) return minutes + 'm ago';
+            return 'just now';
+        }
+        
         // Handle messages from extension
         window.addEventListener('message', event => {
             const message = event.data;
@@ -859,6 +1078,10 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
                     } else {
                         console.log('ERROR: message.text is undefined!');
                     }
+                    break;
+                case 'regexHistory':
+                    console.log('Received history:', message.history);
+                    renderHistory(message.history);
                     break;
             }
         });
@@ -934,6 +1157,10 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         autoLoadEditorText();
         setTimeout(autoLoadEditorText, 200);
         setTimeout(autoLoadEditorText, 500);
+        
+        // Load history
+        console.log('Requesting regex history...');
+        vscode.postMessage({ type: 'getHistory' });
     </script>
 </body>
 </html>`;

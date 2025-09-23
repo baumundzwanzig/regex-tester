@@ -174,7 +174,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(clearDecorationsDisposable);
 
 	// Webview Provider registrieren
-	const webviewProvider = new RegexWebviewProvider(context.extensionUri);
+	const webviewProvider = new RegexWebviewProvider(context.extensionUri, context);
 	
 	// Editor change listener für Webview
 	const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {

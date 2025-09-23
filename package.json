@@ -8,7 +8,7 @@
     "url": "https://github.com/baumundzwanzig/regex-tester.git"
   },
   "license": "MIT",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "icon": "Regex-tester-logo.png",
   "engines": {
     "vscode": "^1.104.0"
@@ -22,18 +22,13 @@
   "contributes": {
     "commands": [
       {
-        "command": "regex-tester.findRegex",
-        "title": "RegEx finden",
-        "icon": "$(regex)"
-      },
-      {
         "command": "regex-tester.findRegexFromSelection",
         "title": "Find RegEx from Selection"
       },
       {
         "command": "regex-tester.openWebview",
         "title": "RegEx Analyzer",
-        "icon": "$(browser)"
+        "icon": "$(regex)"
       }
     ],
     "menus": {

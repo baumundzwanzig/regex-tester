@@ -6,6 +6,21 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-01-16
+
+### ✨ New Features
+- **📚 Regex History**: Added comprehensive regex history functionality that saves your last 20 regex patterns
+  - Dropdown interface with timestamps for easy pattern selection
+  - Automatic duplicate detection and removal
+  - Clear history option for privacy
+  - Persistent storage across VS Code sessions
+  - Intuitive focus/blur dropdown behavior
+
+### 🎨 Enhanced
+- **🔍 Better User Experience**: History dropdown appears when focusing the regex input field
+- **💾 Smart Storage**: Uses VS Code workspace state for reliable pattern persistence
+- **🕒 Time-based Organization**: Most recent patterns appear first with human-readable timestamps
+
 ## [0.4.0] - 2025-09-23
 
 ### 🐛 Fixed
