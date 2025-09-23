@@ -4,7 +4,7 @@ All notable changes to the "regex-tester" extension will be documented in this f
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+
 
 ## [0.5.0] - 2025-01-16
 
@@ -15,6 +15,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   - Clear history option for privacy
   - Persistent storage across VS Code sessions
   - Intuitive focus/blur dropdown behavior
+  - Removed "Find Regex" button, because the shortcut is more handy. You can now toggle the Analyzer with the Editorview button.
 
 ### 🎨 Enhanced
 - **🔍 Better User Experience**: History dropdown appears when focusing the regex input field

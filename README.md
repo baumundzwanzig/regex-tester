@@ -2,6 +2,9 @@
 
 A powerful Visual Studio Code extension for testing regular expressions directly in your editor. No more switching between VSCode and external regex testing websites!
 
+![Screenshot](Screenshot1.png)
+![GIF](RegExTesterGIF.gif)
+
 ## ✨ Features
 
 ### 🔍 **Interactive Regex Analyzer** (NEW!)
