@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { highlightRegexMatches, clearAllHighlights } from './highlighter';
+import { highlightRegexMatches, highlightRegexMatchesInEditor, clearAllHighlights } from './highlighter';
 
 export class RegexWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'regex-tester.webview';
@@ -9,6 +9,7 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
     private _panel?: vscode.WebviewPanel;
     private _mainDecorationType?: vscode.TextEditorDecorationType;
     private _groupDecorationTypes: vscode.TextEditorDecorationType[] = [];
+    private _lastActiveEditor?: vscode.TextEditor; // Store the last editor we worked with
 
     constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -146,9 +147,13 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            this._lastActiveEditor = editor; // Store the editor we're working with
+        }
         const text = editor ? editor.document.getText() : '';
         
         console.log('Sending editor text to webview:', text.length, 'characters');
+        console.log('Stored editor for highlighting:', editor?.document.fileName || 'none');
         
         targetWebview.postMessage({
             type: 'activeEditorText',
@@ -164,25 +169,31 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             testStringLength: testString.length
         });
         
-        const editor = vscode.window.activeTextEditor;
+        // Try to get the editor - first check stored editor, then active editor
+        let editor = this._lastActiveEditor;
+        if (!editor || !vscode.window.visibleTextEditors.includes(editor)) {
+            editor = vscode.window.activeTextEditor;
+        }
+        
         if (!editor) {
-            console.log('[WebviewProvider] ERROR: No active editor found for highlighting');
+            console.log('[WebviewProvider] ERROR: No editor found for highlighting (neither stored nor active)');
             return;
         }
 
-        console.log('[WebviewProvider] Active editor found:', {
+        console.log('[WebviewProvider] Using editor for highlighting:', {
             fileName: editor.document.fileName,
             editorTextLength: editor.document.getText().length,
             testStringLength: testString.length,
-            textMatches: editor.document.getText() === testString ? 'YES' : 'NO'
+            textMatches: editor.document.getText() === testString ? 'YES' : 'NO',
+            editorSource: this._lastActiveEditor === editor ? 'stored' : 'active'
         });
 
         // Always use the editor text for highlighting to ensure consistency
         const editorText = editor.document.getText();
         console.log('[WebviewProvider] Using editor text for highlighting instead of provided text');
         
-        // Use the shared highlighting function
-        highlightRegexMatches(regexPattern, flags, editorText);
+        // Use the shared highlighting function with the specific editor
+        highlightRegexMatchesInEditor(editor, regexPattern, flags, editorText);
         
         console.log('[WebviewProvider] Called highlightRegexMatches with editor text');
         console.log('[WebviewProvider] ===== _highlightMatchesInEditor END =====');
@@ -269,6 +280,16 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         
         .regex-input {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        
+        .regex-input.valid {
+            border-color: var(--vscode-inputValidation-infoBackground);
+            box-shadow: 0 0 0 1px var(--vscode-inputValidation-infoBackground);
+        }
+        
+        .regex-input.invalid {
+            border-color: var(--vscode-inputValidation-errorBorder);
+            box-shadow: 0 0 0 1px var(--vscode-inputValidation-errorBorder);
         }
         
         .button-group {
@@ -360,6 +381,19 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             padding: 20px;
         }
         
+        .analyzing {
+            color: var(--vscode-charts-blue);
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            animation: pulse 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { opacity: 0.6; }
+            to { opacity: 1.0; }
+        }
+        
         .summary {
             background-color: var(--vscode-panel-background);
             border: 1px solid var(--vscode-panel-border);
@@ -419,12 +453,43 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         
         // Auto-analyze on input change (with debounce)
         let debounceTimer;
-        [regexInput, flagsInput, testStringInput].forEach(input => {
-            input.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(analyzeRegex, 500);
-            });
+        let regexDebounceTimer;
+        
+        // Faster debounce for regex input (more responsive)
+        regexInput.addEventListener('input', () => {
+            clearTimeout(regexDebounceTimer);
+            validateRegex(); // Immediate validation
+            regexDebounceTimer = setTimeout(analyzeRegex, 300); // Faster for regex changes
         });
+        
+        // Regular debounce for flags input
+        flagsInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            validateRegex(); // Validate when flags change too
+            debounceTimer = setTimeout(analyzeRegex, 300);
+        });
+        
+        // Slower debounce for test string input (can be larger text)
+        testStringInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(analyzeRegex, 800); // Slower for large text changes
+        });
+        
+        function validateRegex() {
+            const regex = regexInput.value.trim();
+            const flags = flagsInput.value.trim();
+            
+            regexInput.classList.remove('valid', 'invalid');
+            
+            if (regex) {
+                try {
+                    new RegExp(regex, flags);
+                    regexInput.classList.add('valid');
+                } catch (e) {
+                    regexInput.classList.add('invalid');
+                }
+            }
+        }
         
         function analyzeRegex() {
             const regex = regexInput.value.trim();
@@ -433,8 +498,15 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             
             if (!regex) {
                 resultsDiv.innerHTML = '<div class="no-matches">Enter a regex pattern to start analyzing</div>';
+                // Clear highlights when no regex
+                vscode.postMessage({
+                    type: 'clearHighlights'
+                });
                 return;
             }
+            
+            // Show analyzing indicator
+            resultsDiv.innerHTML = '<div class="analyzing">🔍 Analyzing regex...</div>';
             
             vscode.postMessage({
                 type: 'analyzeRegex',

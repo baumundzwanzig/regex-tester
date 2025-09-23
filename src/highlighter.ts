@@ -96,42 +96,47 @@ export function clearAllHighlights() {
 
 // Neue Funktion für Webview-Integration - arbeitet direkt mit Regex
 export function highlightRegexMatches(regex: string, flags: string, text?: string): void {
-    console.log('[highlightRegexMatches] ===== START =====');
-    console.log('[highlightRegexMatches] Parameters:', { 
-        regex: `"${regex}"`, 
-        flags: `"${flags}"`, 
-        textProvided: !!text,
-        textLength: text?.length || 'N/A'
-    });
-    
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         console.log('[highlightRegexMatches] ERROR: No active editor found');
         return;
     }
+    highlightRegexMatchesInEditor(editor, regex, flags, text);
+}
 
-    console.log('[highlightRegexMatches] Active editor:', {
-        fileName: editor.document.fileName,
-        languageId: editor.document.languageId,
-        lineCount: editor.document.lineCount
+// Funktion für spezifischen Editor - für bessere Kontrolle
+export function highlightRegexMatchesInEditor(targetEditor: vscode.TextEditor, regex: string, flags: string, text?: string): void {
+    console.log('[highlightRegexMatchesInEditor] ===== START =====');
+    console.log('[highlightRegexMatchesInEditor] Parameters:', { 
+        regex: `"${regex}"`, 
+        flags: `"${flags}"`, 
+        textProvided: !!text,
+        textLength: text?.length || 'N/A',
+        editorFile: targetEditor.document.fileName
+    });
+
+    console.log('[highlightRegexMatchesInEditor] Target editor:', {
+        fileName: targetEditor.document.fileName,
+        languageId: targetEditor.document.languageId,
+        lineCount: targetEditor.document.lineCount
     });
 
     // Get text from editor if not provided
-    const searchText = text || editor.document.getText();
-    console.log('[highlightRegexMatches] Text analysis:', {
+    const searchText = text || targetEditor.document.getText();
+    console.log('[highlightRegexMatchesInEditor] Text analysis:', {
         searchTextLength: searchText.length,
-        editorTextLength: editor.document.getText().length,
+        editorTextLength: targetEditor.document.getText().length,
         textSource: text ? 'provided' : 'from editor',
         firstLine: searchText.split('\n')[0] || 'empty',
         preview: searchText.substring(0, 100).replace(/\n/g, '\\n'),
-        textMatch: text === editor.document.getText() ? 'SAME' : 'DIFFERENT'
+        textMatch: text === targetEditor.document.getText() ? 'SAME' : 'DIFFERENT'
     });
 
     // Test the regex first
     try {
-        console.log('[highlightRegexMatches] Testing regex construction...');
+        console.log('[highlightRegexMatchesInEditor] Testing regex construction...');
         const regexObj = new RegExp(regex, flags);
-        console.log('[highlightRegexMatches] Regex created successfully:', {
+        console.log('[highlightRegexMatchesInEditor] Regex created successfully:', {
             source: regexObj.source,
             flags: regexObj.flags,
             global: regexObj.global,
@@ -141,7 +146,7 @@ export function highlightRegexMatches(regex: string, flags: string, text?: strin
 
         // Test with a simple test first
         const testResult = regexObj.test(searchText);
-        console.log('[highlightRegexMatches] Regex test result:', testResult);
+        console.log('[highlightRegexMatchesInEditor] Regex test result:', testResult);
         
         // Reset regex for exec
         regexObj.lastIndex = 0;
@@ -151,11 +156,11 @@ export function highlightRegexMatches(regex: string, flags: string, text?: strin
         let matchCount = 0;
         const maxMatches = 1000; // Prevent infinite loops
 
-        console.log('[highlightRegexMatches] Starting match search...');
+        console.log('[highlightRegexMatchesInEditor] Starting match search...');
         
         while ((match = regexObj.exec(searchText)) !== null && matchCount < maxMatches) {
             matchCount++;
-            console.log(`[highlightRegexMatches] Match ${matchCount}:`, {
+            console.log(`[highlightRegexMatchesInEditor] Match ${matchCount}:`, {
                 fullMatch: `"${match[0]}"`,
                 index: match.index,
                 length: match[0].length,
@@ -173,29 +178,29 @@ export function highlightRegexMatches(regex: string, flags: string, text?: strin
 
             // Prevent infinite loop for zero-length matches
             if (match[0].length === 0) {
-                console.log('[highlightRegexMatches] Zero-length match detected, advancing manually');
+                console.log('[highlightRegexMatchesInEditor] Zero-length match detected, advancing manually');
                 regexObj.lastIndex++;
             }
             
             // Break if not global to prevent infinite loop
             if (!regexObj.global) {
-                console.log('[highlightRegexMatches] Non-global regex, stopping after first match');
+                console.log('[highlightRegexMatchesInEditor] Non-global regex, stopping after first match');
                 break;
             }
         }
 
-        console.log('[highlightRegexMatches] Match search completed:', {
+        console.log('[highlightRegexMatchesInEditor] Match search completed:', {
             totalMatches: matchCount,
             matchesToHighlight: matches.length,
             reachedMaxMatches: matchCount >= maxMatches
         });
 
-        // Use the existing highlighting function
-        highlightMatches(editor, matches);
-        console.log(`[highlightRegexMatches] Called highlightMatches with ${matches.length} matches`);
+        // Use the existing highlighting function with the specific editor
+        highlightMatches(targetEditor, matches);
+        console.log(`[highlightRegexMatchesInEditor] Called highlightMatches with ${matches.length} matches`);
 
     } catch (error) {
-        console.error('[highlightRegexMatches] ERROR in regex processing:', {
+        console.error('[highlightRegexMatchesInEditor] ERROR in regex processing:', {
             error: error instanceof Error ? error.message : String(error),
             regex,
             flags,
@@ -203,5 +208,5 @@ export function highlightRegexMatches(regex: string, flags: string, text?: strin
         });
     }
     
-    console.log('[highlightRegexMatches] ===== END =====');
+    console.log('[highlightRegexMatchesInEditor] ===== END =====');
 }
