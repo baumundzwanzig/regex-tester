@@ -23,6 +23,10 @@
         "command": "regex-tester.findRegex",
         "title": "RegEx finden",
         "icon": "$(regex)"
+      },
+      {
+        "command": "regex-tester.findRegexFromSelection",
+        "title": "Find RegEx from Selection"
       }
     ],
     "menus": {
@@ -30,6 +34,13 @@
         {
           "command": "regex-tester.findRegex",
           "when": "editorTextFocus && !editorReadonly",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "regex-tester.findRegexFromSelection",
+          "when": "editorHasSelection",
           "group": "navigation"
         }
       ]

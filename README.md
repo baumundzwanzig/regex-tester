@@ -8,6 +8,7 @@ This is my first extension i have ever made and published. I was tired switching
 + Outputs the strings of all detected matches and groups
 + When clicking anywhere in the editor, the highlighting disapears.
 + Accessible thruogh a button in the header of the open tab and Keybinding (CTRL+SHIFT+ALT+R)
++ You can select a text in the editor an rightclick. Then you will be able to click on "Find RegEx from selection" and you can look for the marked RegEx instantly.
 
 ## Known Issues
 
@@ -15,6 +16,10 @@ This is my first extension i have ever made and published. I was tired switching
 + You can always run one RegEx at a time and u have to reopen the extension
 
 ## Release Notes
+
+### 0.3.2
+
++ New Feature: You can mark a RegEx in the Editor, rightclick and select "Find RegEx from selection" to instantly test the RegEx in the current file.
 
 ### 0.3.0
 
