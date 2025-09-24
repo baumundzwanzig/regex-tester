@@ -2,8 +2,8 @@
 
 A powerful Visual Studio Code extension for testing regular expressions directly in your editor. No more switching between VSCode and external regex testing websites!
 
-![Screenshot](Screenshot1.png)
-![GIF](RegExGIF.gif)
+![Screenshot](./images/Screenshot1.png)
+![GIF](./images/RegExGIF.gif)
 
 ## ✨ Features
 
