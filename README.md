@@ -13,6 +13,7 @@ A powerful Visual Studio Code extension for testing regular expressions directly
 - **Real-time Updates**: Matches update instantly as you type your regex
 - **Live Validation**: Visual feedback shows if your regex is valid while typing
 - **Smart Debouncing**: Optimized update speeds for different input types
+- **CSV Export**: Export your matches as .csv file with just one click
 
 ### 🎯 **Advanced Highlighting**
 - **Real-time Editor Highlighting**: Matches are highlighted directly in your editor
@@ -74,7 +75,13 @@ A powerful Visual Studio Code extension for testing regular expressions directly
 
 ## 📝 Release Notes
 
-### 🎉 0.4.0 (Latest)
+### 🎉 0.6.0 (Latest)
+**Added CSV-Export function**
+
+- ✨ **NEW**: Button in the Analyzer view to export your matches as a .csv file
+- minor bug fixes
+
+### 0.5.0
 **Major Update: Interactive Analyzer & Real-time Features**
 
 - ✨ **NEW**: Interactive Webview-based Regex Analyzer
