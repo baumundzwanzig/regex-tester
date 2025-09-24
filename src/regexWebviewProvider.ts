@@ -103,6 +103,9 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
                 this._clearHistory();
                 this._sendHistoryToWebview(webview);
                 break;
+            case 'exportCSV':
+                this._exportMatchesToCSV(message.matches, message.regex, message.flags);
+                break;
         }
     }
 
@@ -808,6 +811,7 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             <button id="loadEditorBtn" class="secondary-button">📄 Load from Active Editor</button>
             <button id="clearBtn" class="secondary-button">🗑️ Clear</button>
             <button id="clearHighlightsBtn" class="secondary-button">✨ Clear Highlights</button>
+            <button id="exportCsvBtn" class="secondary-button" disabled>📊 Export CSV</button>
             <button id="debugBtn" class="secondary-button">🐛 Debug Pattern</button>
         </div>
         
@@ -819,6 +823,10 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         const vscode = acquireVsCodeApi();
         console.log('vscode API acquired:', !!vscode);
         
+        // Global variables for CSV export
+        window.lastMatches = [];
+        window.regexHistory = [];
+        
         // Elements
         const regexInput = document.getElementById('regex');
         const flagsInput = document.getElementById('flags');
@@ -827,6 +835,7 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         const loadEditorBtn = document.getElementById('loadEditorBtn');
         const clearBtn = document.getElementById('clearBtn');
         const clearHighlightsBtn = document.getElementById('clearHighlightsBtn');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
         const debugBtn = document.getElementById('debugBtn');
         const resultsDiv = document.getElementById('results');
         
@@ -840,6 +849,7 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         loadEditorBtn.addEventListener('click', loadFromEditor);
         clearBtn.addEventListener('click', clearAll);
         clearHighlightsBtn.addEventListener('click', clearHighlights);
+        exportCsvBtn.addEventListener('click', exportMatches);
         debugBtn.addEventListener('click', debugPattern);
         
         // History event listeners
@@ -940,11 +950,33 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
             flagsInput.value = 'g';
             testStringInput.value = '';
             resultsDiv.innerHTML = '';
+            
+            // Clear matches and disable export button
+            window.lastMatches = [];
+            exportCsvBtn.disabled = true;
         }
         
         function clearHighlights() {
             vscode.postMessage({
                 type: 'clearHighlights'
+            });
+        }
+        
+        function exportMatches() {
+            if (!window.lastMatches || window.lastMatches.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">📊 No matches available to export. Please analyze a regex first!</div>';
+                return;
+            }
+            
+            // Show loading message
+            resultsDiv.innerHTML = '<div class="analyzing">📊 Exporting matches to CSV...</div>';
+            
+            // Send export request with current matches and regex info
+            vscode.postMessage({
+                type: 'exportCSV',
+                matches: window.lastMatches,
+                regex: regexInput.value.trim(),
+                flags: flagsInput.value.trim()
             });
         }
         
@@ -1087,6 +1119,15 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
         });
         
         function displayResults(data) {
+            // Store matches globally for CSV export
+            window.lastMatches = data.isValid && data.matches ? data.matches : [];
+            
+            // Enable/disable export button based on match availability
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            if (exportCsvBtn) {
+                exportCsvBtn.disabled = window.lastMatches.length === 0;
+            }
+            
             // Check if there's existing debug info to preserve
             const existingDebugInfo = resultsDiv.querySelector('.debug-info');
             let debugInfoHtml = '';
@@ -1164,5 +1205,137 @@ export class RegexWebviewProvider implements vscode.WebviewViewProvider {
     </script>
 </body>
 </html>`;
+    }
+
+    // CSV Export functionality
+    private async _exportMatchesToCSV(matches: Array<{
+        index: number;
+        value: string;
+        groups: string[];
+        line: number;
+        column: number;
+    }>, regex: string, flags: string) {
+        try {
+            console.log('[CSV Export] Starting export with', matches.length, 'matches');
+            
+            if (matches.length === 0) {
+                vscode.window.showInformationMessage('No matches to export.');
+                return;
+            }
+
+            // Generate CSV content
+            const csvContent = this._generateCSVContent(matches, regex, flags);
+            
+            // Show save dialog
+            const saveUri = await vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.file('regex-matches.csv'),
+                filters: {
+                    'CSV Files': ['csv'],
+                    'All Files': ['*']
+                }
+            });
+
+            if (saveUri) {
+                // Write file
+                const buffer = Buffer.from(csvContent, 'utf8');
+                await vscode.workspace.fs.writeFile(saveUri, buffer);
+                
+                // Show success message with option to open file
+                const openAction = 'Open File';
+                const result = await vscode.window.showInformationMessage(
+                    `CSV exported successfully to ${saveUri.fsPath}`,
+                    openAction
+                );
+                
+                if (result === openAction) {
+                    await vscode.window.showTextDocument(saveUri);
+                }
+            }
+        } catch (error) {
+            console.error('[CSV Export] Error:', error);
+            vscode.window.showErrorMessage(`Failed to export CSV: ${error}`);
+        }
+    }
+
+    private _generateCSVContent(matches: Array<{
+        index: number;
+        value: string;
+        groups: string[];
+        line: number;
+        column: number;
+    }>, regex: string, flags: string): string {
+        console.log('[CSV Export] Generating CSV content...');
+        
+        // Determine the maximum number of groups across all matches
+        const maxGroups = Math.max(0, ...matches.map(match => match.groups.length));
+        
+        // Build header row
+        const headers = [
+            'Match',
+            'Line',
+            'Column',
+            'Index',
+            'Length'
+        ];
+        
+        // Add group columns
+        for (let i = 0; i < maxGroups; i++) {
+            headers.push(`Group ${i + 1}`);
+        }
+        
+        // Add metadata columns
+        headers.push('Regex Pattern', 'Flags');
+        
+        // Build rows
+        const rows = [headers];
+        
+        matches.forEach((match, matchIndex) => {
+            const row = [
+                this._escapeCsvValue(match.value),
+                match.line.toString(),
+                match.column.toString(),
+                match.index.toString(),
+                match.value.length.toString()
+            ];
+            
+            // Add group values
+            for (let i = 0; i < maxGroups; i++) {
+                const groupValue = i < match.groups.length ? match.groups[i] : '';
+                row.push(this._escapeCsvValue(groupValue || ''));
+            }
+            
+            // Add metadata (only for first row to avoid repetition)
+            if (matchIndex === 0) {
+                row.push(this._escapeCsvValue(regex));
+                row.push(this._escapeCsvValue(flags));
+            } else {
+                row.push('', ''); // Empty metadata for subsequent rows
+            }
+            
+            rows.push(row);
+        });
+        
+        // Convert to CSV string
+        const csvContent = rows.map(row => row.join(',')).join('\n');
+        
+        console.log('[CSV Export] Generated CSV with', rows.length - 1, 'data rows');
+        return csvContent;
+    }
+
+    private _escapeCsvValue(value: string): string {
+        // Handle null/undefined
+        if (value === null || value === undefined) {
+            return '';
+        }
+        
+        // Convert to string if not already
+        const stringValue = String(value);
+        
+        // If the value contains comma, quote, or newline, wrap in quotes and escape quotes
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+            return '"' + stringValue.replace(/"/g, '""') + '"';
+        }
+        
+        return stringValue;
     }
 }
